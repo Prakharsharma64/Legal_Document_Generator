@@ -1,0 +1,215 @@
+{% extends "base.html" %} {% block title %}Document History{% endblock %} {%
+block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="header">
+      <h1><i class="fas fa-history me-2"></i>Document History</h1>
+      <p>View your previously generated documents</p>
+    </div>
+
+    <div class="history-list">
+      {% for doc in history|sort(attribute='timestamp', reverse=true) %}
+      <div class="history-item">
+        <div class="history-item-header">
+          <h3>{{ doc.document_type }}</h3>
+          <span class="timestamp">{{ doc.timestamp }}</span>
+        </div>
+        <div class="history-item-details">
+          <p><strong>Language:</strong> {{ doc.language }}</p>
+          <div class="history-item-actions">
+            <button
+              class="btn btn-primary btn-sm"
+              onclick="viewDocument({{ doc.id }})"
+            >
+              <i class="fas fa-eye me-1"></i> View
+            </button>
+            <button
+              class="btn btn-secondary btn-sm"
+              onclick="downloadDocument({{ doc.id }})"
+            >
+              <i class="fas fa-download me-1"></i> Download
+            </button>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="no-history">
+        <p>No documents generated yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Document Modal -->
+<div class="modal fade" id="documentModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Generated Document</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div id="modalDocumentContent"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          onclick="copyToClipboard()"
+        >
+          <i class="fas fa-copy me-1"></i> Copy
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .history-list {
+    margin-top: 2rem;
+  }
+
+  .history-item {
+    background-color: var(--darker-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: transform 0.3s ease;
+  }
+
+  .history-item:hover {
+    transform: translateY(-2px);
+  }
+
+  .history-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .history-item-header h3 {
+    color: var(--primary-color);
+    margin: 0;
+  }
+
+  .timestamp {
+    color: #888;
+    font-size: 0.9rem;
+  }
+
+  .history-item-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .history-item-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .no-history {
+    text-align: center;
+    padding: 2rem;
+    color: #888;
+  }
+
+  .modal-content {
+    background-color: var(--darker-bg);
+    color: var(--text-color);
+  }
+
+  .modal-header {
+    border-bottom-color: var(--border-color);
+  }
+
+  .modal-footer {
+    border-top-color: var(--border-color);
+  }
+
+  #modalDocumentContent {
+    white-space: pre-wrap;
+    font-family: "Courier New", Courier, monospace;
+    line-height: 1.6;
+    padding: 1rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+</style>
+
+<script>
+  let documentModal;
+
+  document.addEventListener("DOMContentLoaded", function () {
+    documentModal = new bootstrap.Modal(
+      document.getElementById("documentModal")
+    );
+  });
+
+  async function viewDocument(id) {
+    try {
+      const response = await fetch(`/document/${id}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        document.getElementById("modalDocumentContent").textContent =
+          data.content;
+        documentModal.show();
+      } else {
+        alert("Error loading document: " + data.error);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error loading document");
+    }
+  }
+
+  async function downloadDocument(id) {
+    try {
+      const response = await fetch(`/document/${id}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        const blob = new Blob([data.content], { type: "text/plain" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${data.document_type
+          .toLowerCase()
+          .replace(/\s+/g, "_")}_${data.timestamp.replace(/[^0-9]/g, "")}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert("Error downloading document: " + data.error);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error downloading document");
+    }
+  }
+
+  function copyToClipboard() {
+    const content = document.getElementById("modalDocumentContent").textContent;
+    navigator.clipboard
+      .writeText(content)
+      .then(() => {
+        alert("Document copied to clipboard!");
+      })
+      .catch((err) => {
+        console.error("Failed to copy text: ", err);
+      });
+  }
+</script>
+{% endblock %}

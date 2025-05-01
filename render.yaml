@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: legal-document-generator
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python render_app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: SITE_URL
+        sync: false
+      - key: SITE_NAME
+        sync: false
